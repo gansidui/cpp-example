@@ -45,6 +45,13 @@ static void decode(unsigned char src[4], unsigned char dst[3]) {
 	dst[2] = ((tmp[2] & 0x3) << 6) + tmp[3];
 }
 
+static bool is_base64_chars(unsigned char c) {
+	if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || '+' == c || '/' == c) {
+		return true;
+	}
+	return false;
+}
+
 bool base64_encode(const unsigned char *src, int src_len, unsigned char *dst, int dst_max_size, int *dst_len) {
 	int i = 0, j = 0, enc_len = 0;
 	unsigned char tmp[3];
@@ -93,6 +100,9 @@ bool base64_decode(const unsigned char *src, int src_len, unsigned char *dst, in
 			break;
 		}
 		// 判断src是否合法
+		if (!is_base64_chars(src[j])) {
+			return false;
+		}
 
 		tmp[i++] = src[j++];
 
