@@ -1,8 +1,8 @@
 #include <iostream>
 #include <list>
+#include <string>
 #include <pthread.h>
 #include <unistd.h>
-
 
 template<typename item>
 class channel {
@@ -35,7 +35,7 @@ public:
 	void put(const item &in) {
 		pthread_mutex_lock(&mutex);
 		if (closed) {
-			throw std::logic_error("put to closed channel");
+			throw std::string("put to closed channel");
 		}
 		queue.push_back(in);
 		pthread_cond_signal(&cond);
@@ -72,7 +72,7 @@ int id = 0;
 void *produce(void *arg) {
 	while (1) {
 		c.put(id++);
-		sleep(1000);
+		sleep(1);
 	}
 	return 0;
 }
