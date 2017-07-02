@@ -19,6 +19,9 @@
 // 每次pop都会从编号为1的队列开始依次读取
 // 作用：用于区分Item的优先级，编号为1的队列优先级最高，编号为_MAX_QUEUE_NUM的队列优先级最低
 // 只有高优先级的队列为空时，才有机会读取低优先级的队列
+//
+// 注意：如果T的类型是普通指针，需要调用close，再通过pop遍历来delete；如果是对象或者智能指针，则调用clear即可释放内存
+//
 template<typename T>
 class TXCGradeBlockingQueue {
 public:
@@ -42,6 +45,19 @@ public:
     bool is_closed() const {
         std::lock_guard<std::mutex> lock(_mutex);
         return _closed;
+    }
+    
+    void clear() {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _closed = true;
+        _items_size = 0;
+        _cond.notify_all();
+        
+        for (int i = 0; i < _MAX_QUEUE_NUM; ++i) {
+            while (!_queue[i].empty()) {
+                _queue[i].pop();
+            }
+        }
     }
     
     void push(const T &item, int queue_index) {
@@ -89,7 +105,7 @@ public:
     
     size_t size() const {
         std::lock_guard<std::mutex> lock(_mutex);
-        return _queue.size();
+        return _items_size;
     }
     
 private:
