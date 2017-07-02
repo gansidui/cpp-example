@@ -22,15 +22,15 @@
 template<typename T>
 class TXCGradeBlockingQueue {
 public:
-    TXCGradeBlockingQueue(int max_queue_num): _closed(false), _items_size(0) {
+    explicit TXCGradeBlockingQueue(int max_queue_num): _closed(false), _items_size(0) {
         assert(max_queue_num >= 1 && max_queue_num <= _MAX_QUEUE_NUM);
         _max_queue_num = max_queue_num;
     }
     virtual ~TXCGradeBlockingQueue() { }
     TXCGradeBlockingQueue(const TXCGradeBlockingQueue &rhs) = delete;
-    TXCGradeBlockingQueue(const TXCGradeBlockingQueue &&rhs) = delete;
+    TXCGradeBlockingQueue(TXCGradeBlockingQueue &&rhs) = delete;
     TXCGradeBlockingQueue& operator = (const TXCGradeBlockingQueue &rhs) = delete;
-    TXCGradeBlockingQueue& operator = (const TXCGradeBlockingQueue &&rhs) = delete;
+    TXCGradeBlockingQueue& operator = (TXCGradeBlockingQueue &&rhs) = delete;
     
     // close后将只能读取数据
     void close() {
