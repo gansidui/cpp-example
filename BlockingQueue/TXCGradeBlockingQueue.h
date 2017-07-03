@@ -84,9 +84,17 @@ public:
     
     // 若closed为true, pop将不再阻塞
     // 读取数据成功返回true，否则返回false
-    bool pop(T &item) {
+    // timeout单位为毫秒, -1表示不设置超时
+    bool pop(T &item, int timeout = -1) {
         std::unique_lock<std::mutex> lock(_mutex);
-        _cond.wait(lock, [this]{return _items_size || _closed;});
+        if (-1 == timeout) {
+            _cond.wait(lock, [this]{return _items_size || _closed;});
+        } else {
+            if (!_cond.wait_for(lock, std::chrono::milliseconds(timeout), [this]{return _items_size || _closed;})) {
+                return false;
+            }
+        }
+        
         if (_items_size) {
             for (int i = 0; i < _max_queue_num; ++i) {
                 if (!_queue[i].empty()) {
