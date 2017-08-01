@@ -9,7 +9,7 @@
 #ifndef TXCGradeBlockingQueue_h
 #define TXCGradeBlockingQueue_h
 
-#include <queue>
+#include <list>
 #include <mutex>
 #include <condition_variable>
 #include <assert.h>
@@ -25,6 +25,9 @@
 template<typename T>
 class TXCGradeBlockingQueue {
 public:
+    TXCGradeBlockingQueue(): _closed(false), _items_size(0) {
+        _max_queue_num = 1;
+    }
     explicit TXCGradeBlockingQueue(int max_queue_num): _closed(false), _items_size(0) {
         assert(max_queue_num >= 1 && max_queue_num <= _MAX_QUEUE_NUM);
         _max_queue_num = max_queue_num;
@@ -34,6 +37,11 @@ public:
     TXCGradeBlockingQueue(TXCGradeBlockingQueue &&rhs) = delete;
     TXCGradeBlockingQueue& operator = (const TXCGradeBlockingQueue &rhs) = delete;
     TXCGradeBlockingQueue& operator = (TXCGradeBlockingQueue &&rhs) = delete;
+    
+    void setMaxGrade(int max_grade) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _max_queue_num = max_grade;
+    }
     
     // close后将只能读取数据
     void close() {
@@ -47,6 +55,11 @@ public:
         return _closed;
     }
     
+    void reuse() {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _closed = false;
+    }
+    
     void clear() {
         std::lock_guard<std::mutex> lock(_mutex);
         _closed = true;
@@ -55,31 +68,22 @@ public:
         
         for (int i = 0; i < _MAX_QUEUE_NUM; ++i) {
             while (!_queue[i].empty()) {
-                _queue[i].pop();
+                _queue[i].pop_front();
             }
         }
     }
     
-    void push(const T &item, int queue_index) {
+    template <typename TT>
+    bool push(TT &&item, int queue_index) {
         if (queue_index < 1 || queue_index > _max_queue_num) {
-            return;
+            return false;
         }
         std::lock_guard<std::mutex> lock(_mutex);
-        if (_closed) return;
-        _queue[queue_index-1].push(item);
+        if (_closed) return false;
+        _queue[queue_index-1].emplace_back(std::forward<TT>(item));
         _items_size ++;
         _cond.notify_one();
-    }
-    
-    void push(T &&item, int queue_index) {
-        if (queue_index < 1 || queue_index > _max_queue_num) {
-            return;
-        }
-        std::lock_guard<std::mutex> lock(_mutex);
-        if (_closed) return;
-        _queue[queue_index-1].push(std::move(item));
-        _items_size ++;
-        _cond.notify_one();
+        return true;
     }
     
     // 若closed为true, pop将不再阻塞
@@ -99,7 +103,7 @@ public:
             for (int i = 0; i < _max_queue_num; ++i) {
                 if (!_queue[i].empty()) {
                     item = std::move(_queue[i].front());
-                    _queue[i].pop();
+                    _queue[i].pop_front();
                     _items_size --;
                     break;
                 }
@@ -120,7 +124,7 @@ private:
     static const int        _MAX_QUEUE_NUM = 10;
     mutable std::mutex      _mutex;
     std::condition_variable _cond;
-    std::queue<T>           _queue[_MAX_QUEUE_NUM];
+    std::list<T>            _queue[_MAX_QUEUE_NUM];
     size_t                  _items_size;
     bool                    _closed;
     int                     _max_queue_num;
