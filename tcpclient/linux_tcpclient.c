@@ -18,7 +18,7 @@ typedef struct {
  * 返回值为0：表示连接成功
  * 返回值为-1：表示连接失败
  */
-uint32_t tcp_connect(tcp_socket *sock, uint8_t *ip, uint16_t port, uint32_t timeout_ms) {
+int32_t tcp_connect(tcp_socket *sock, uint8_t *ip, uint16_t port, uint32_t timeout_ms) {
 	struct sockaddr_in addr;
 	struct timeval tv;
 	fd_set wfds;
@@ -33,6 +33,9 @@ uint32_t tcp_connect(tcp_socket *sock, uint8_t *ip, uint16_t port, uint32_t time
 
 	// 创建socket，并设置为非阻塞
 	sock->fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock->fd < 0) {
+        return -1;
+    }
 	fcntl(sock->fd, F_SETFL, fcntl(sock->fd, F_GETFL) | O_NONBLOCK);
 	
 	// 尝试连接，返回0表示连接成功，否则判断errno，
@@ -67,7 +70,10 @@ uint32_t tcp_connect(tcp_socket *sock, uint8_t *ip, uint16_t port, uint32_t time
 /*
  * 关闭连接
  */
-uint32_t tcp_close(tcp_socket *sock) {
+int32_t tcp_close(tcp_socket *sock) {
+    if (sock->fd < 0) {
+        return -1;
+    }
 	close(sock->fd);
 	return 0;
 }
@@ -77,7 +83,7 @@ uint32_t tcp_close(tcp_socket *sock) {
  * 返回值为0：表示在timeout_ms时间内没有读到数据
  * 返回值为正数：表示读取到的字节数
  */
-uint32_t tcp_read(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_ms) {
+int32_t tcp_read(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_ms) {
 	struct timeval tv;
 	fd_set rfds;
 	int retval;
@@ -107,7 +113,7 @@ uint32_t tcp_read(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_m
  * 返回值为0：表示在timeout_ms时间内没有写入数据
  * 返回值为正数：表示写入的字节数
  */
-uint32_t tcp_write(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_ms) {
+int32_t tcp_write(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_ms) {
 	struct timeval tv;
 	fd_set wfds;
 	int retval;
@@ -145,6 +151,7 @@ uint32_t tcp_write(tcp_socket *sock, uint8_t *buf, uint32_t n, uint32_t timeout_
 
 int main() {
 	tcp_socket sockfd;
+    sockfd.fd = -1;
 	int retval;
 	retval = tcp_connect(&sockfd, "127.0.0.1", 8989, 5);
 	printf("connect: %d\n", retval);
